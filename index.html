@@ -7,8 +7,6 @@
     
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/6119/6119533.png">
     <link rel="icon" href="https://cdn-icons-png.flaticon.com/512/6119/6119533.png">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black">
 
     <style>
         body { font-family: 'Segoe UI', Tahoma, sans-serif; background:#f0f2f5; padding:10px; color: #333; margin:0; }
@@ -118,14 +116,8 @@ const dezenasBichos = {
     "Avestruz":["01","02","03","04"],"Águia":["05","06","07","08"],"Burro":["09","10","11","12"],"Borboleta":["13","14","15","16"],"Cachorro":["17","18","19","20"],"Cabra":["21","22","23","24"],"Carneiro":["25","26","27","28"],"Camelo":["29","30","31","32"],"Cobra":["33","34","35","36"],"Coelho":["37","38","39","40"],"Cavalo":["41","42","43","44"],"Elefante":["45","46","47","48"],"Galo":["49","50","51","52"],"Gato":["53","54","55","56"],"Jacaré":["57","58","59","60"],"Leão":["61","62","63","64"],"Macaco":["65","66","67","68"],"Porco":["69","70","71","72"],"Pavão":["73","74","75","76"],"Peru":["77","78","79","80"],"Touro":["81","82","83","84"],"Tigre":["85","86","87","88"],"Urso":["89","90","91","92"],"Veado":["93","94","95","96"],"Vaca":["97","98","99","00"]
 };
 
-const estadoInicial = {
-    PPT: [], PTM: [], PT: [], PTV: [], PTN: [], CORUJA: [],
-    extrator: { hoje: [], ontem: [], nomesAtrasados: [], listaCompleta: [] }
-};
-
-let dadosApp = JSON.parse(JSON.stringify(estadoInicial));
+let dadosApp = { PPT: [], PTM: [], PT: [], PTV: [], PTN: [], CORUJA: [], extrator: { hoje: [], ontem: [], nomesAtrasados: [], listaCompleta: [] } };
 const listaHorarios = ["PPT", "PTM", "PT", "PTV", "PTN", "CORUJA"];
-
 const limparTexto = (t) => t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
 
 function getBicho(milhar) {
@@ -151,24 +143,26 @@ function extrairLista() {
     if (!texto) return alert("Cole a lista primeiro.");
     dadosApp.extrator = { hoje: [], ontem: [], nomesAtrasados: [], listaCompleta: [] };
     const linhas = texto.split('\n');
+    
     linhas.forEach(linha => {
         const linhaNorm = limparTexto(linha);
-        if (linhaNorm === "") return;
         bichosOficiais.forEach(bicho => {
             const bichoNorm = limparTexto(bicho);
             if (linhaNorm.includes(bichoNorm)) {
-                if (linhaNorm.includes("hoje")) {
-                    if (!dadosApp.extrator.hoje.includes(bicho)) dadosApp.extrator.hoje.push(bicho);
-                } 
-                else if (linhaNorm.includes("ontem")) {
-                    if (!dadosApp.extrator.ontem.includes(bicho)) dadosApp.extrator.ontem.push(bicho);
-                } 
-                else if (linhaNorm.includes("atrasado")) {
-                    if (!dadosApp.extrator.nomesAtrasados.includes(bicho)) {
-                        const dias = linha.match(/\d+/);
-                        dadosApp.extrator.nomesAtrasados.push(bicho);
-                        dadosApp.extrator.listaCompleta.push(`${bicho} (${dias ? dias[0] + ' dias' : 'atrasado'})`);
-                    }
+                if (linhaNorm.includes("hoje") && !dadosApp.extrator.hoje.includes(bicho)) {
+                    dadosApp.extrator.hoje.push(bicho);
+                }
+                else if (linhaNorm.includes("ontem") && !dadosApp.extrator.ontem.includes(bicho)) {
+                    dadosApp.extrator.ontem.push(bicho);
+                }
+                else if (linhaNorm.includes("atrasado") && !dadosApp.extrator.nomesAtrasados.includes(bicho)) {
+                    // CORREÇÃO AQUI: Busca o número que vem antes da palavra "dia" ou "atrasado"
+                    // Ignora números seguidos de º ou ª (posições)
+                    let matchDias = linha.match(/(\d+)\s*(dia|atrasado)/i);
+                    let diasValor = matchDias ? matchDias[1] : "??";
+                    
+                    dadosApp.extrator.nomesAtrasados.push(bicho);
+                    dadosApp.extrator.listaCompleta.push(`${bicho} (${diasValor} dias)`);
                 }
             }
         });
@@ -181,129 +175,58 @@ function atualizarTudo() {
     const painel = document.getElementById('painelResultados');
     painel.innerHTML = '';
     listaHorarios.forEach(h => {
-        let html = `<div class="card-horario"><strong>${h}</strong><br>`;
-        html += (dadosApp[h] && dadosApp[h].length) ? dadosApp[h].join('<br>') : "...";
-        painel.innerHTML += html + `</div>`;
+        let html = `<div class="card-horario"><strong>${h}</strong><br>` + (dadosApp[h].length ? dadosApp[h].join('<br>') : "...") + `</div>`;
+        painel.innerHTML += html;
     });
-
     document.getElementById('resHoje').innerHTML = dadosApp.extrator.hoje.join(', ') || "-";
     document.getElementById('resOntem').innerHTML = dadosApp.extrator.ontem.join(', ') || "-";
     document.getElementById('resAtrasados').innerHTML = dadosApp.extrator.listaCompleta.slice(0, 5).join(' | ') || "-";
-
     gerarProjecaoCinco();
     localStorage.setItem('rioApp_Projecao', JSON.stringify(dadosApp));
 }
 
 function gerarProjecaoCinco() {
     const container = document.getElementById('painelProjecao');
-    const listaHtml = document.getElementById('listaProjetada');
-    const campoApostas = document.getElementById('campoApostasCruz');
-    const listaSugestoes = document.getElementById('listaSugestoes');
-    
     const dataInput = document.getElementById('dataCruz').value;
-    let dezenasCruzadas = [];
     let bichosCruz = [];
     if(dataInput){
         const dia = parseInt(dataInput.split('-')[2]);
         const numCruz = [(dia+3)%10, (dia+6)%10, (dia+9)%10, (dia+12)%10].map(String);
         document.getElementById('txtCruz').innerText = `CRUZ: ${numCruz.join(' - ')}`;
-        
-        numCruz.forEach(n1 => {
-            numCruz.forEach(n2 => {
-                if(n1 !== n2) {
-                    let dezena = n1 + n2;
-                    dezenasCruzadas.push(dezena);
-                    let nomeB = getBicho("00" + dezena);
-                    if(nomeB && !bichosCruz.includes(nomeB)) bichosCruz.push(nomeB);
-                }
-            });
-        });
+        numCruz.forEach(n1 => numCruz.forEach(n2 => { if(n1 !== n2) { let b = getBicho("00" + n1 + n2); if(b && !bichosCruz.includes(b)) bichosCruz.push(b); } }));
     }
 
     let bloqueados = [...dadosApp.extrator.hoje, ...dadosApp.extrator.ontem];
-    listaHorarios.forEach(h => {
-        if(dadosApp[h]){
-            dadosApp[h].forEach(m => {
-                const b = getBicho(m);
-                if(b && !bloqueados.includes(b)) bloqueados.push(b);
-            });
-        }
-    });
+    listaHorarios.forEach(h => dadosApp[h].forEach(m => { const b = getBicho(m); if(b && !bloqueados.includes(b)) bloqueados.push(b); }));
 
     const candidatos = dadosApp.extrator.nomesAtrasados.filter(nome => !bloqueados.includes(nome));
-
     if (candidatos.length > 0) {
-        listaHtml.innerHTML = "";
-        listaSugestoes.innerHTML = "";
+        const listaHtml = document.getElementById('listaProjetada');
+        const listaSugestoes = document.getElementById('listaSugestoes');
+        listaHtml.innerHTML = ""; listaSugestoes.innerHTML = "";
         let temSugestao = false;
+        let ordenados = [...new Set([...bichosCruz.filter(b => candidatos.includes(b)), ...candidatos])].slice(0, 7);
         
-        let ordenados = [...new Set([...bichosCruz.filter(b => candidatos.includes(b)), ...candidatos])];
-        
-        ordenados.slice(0, 7).forEach(grupo => {
-            const ehDaCruz = bichosCruz.includes(grupo);
-            listaHtml.innerHTML += `<div class="grupo-badge">${grupo}${ehDaCruz ? '<span class="selo-cruz">CRUZ</span>' : ''}</div>`;
-            
-            if(ehDaCruz) {
+        ordenados.forEach(grupo => {
+            const ehCruz = bichosCruz.includes(grupo);
+            listaHtml.innerHTML += `<div class="grupo-badge">${grupo}${ehCruz ? '<span class="selo-cruz">CRUZ</span>' : ''}</div>`;
+            if(ehCruz) {
                 temSugestao = true;
-                const dzs = dezenasBichos[grupo];
-                const d = dzs[Math.floor(Math.random() * dzs.length)];
-                const c = Math.floor(Math.random() * 10).toString() + d;
-                const m = Math.floor(Math.random() * 10).toString() + Math.floor(Math.random() * 10).toString() + d;
-                
-                listaSugestoes.innerHTML += `<div class="item-aposta"><b>${grupo}:</b> Dezena: ${d} | Centena: ${c} | Milhar: ${m}</div>`;
+                const d = dezenasBichos[grupo][Math.floor(Math.random()*4)];
+                listaSugestoes.innerHTML += `<div class="item-aposta"><b>${grupo}:</b> Dz: ${d} | C: ${Math.floor(Math.random()*10).toString()+d} | M: ${Math.floor(Math.random()*10).toString()+Math.floor(Math.random()*10)+d}</div>`;
             }
         });
-        
         container.style.display = "block";
-        campoApostas.style.display = temSugestao ? "block" : "none";
-    } else {
-        container.style.display = "none";
-    }
+        document.getElementById('campoApostasCruz').style.display = temSugestao ? "block" : "none";
+    } else { container.style.display = "none"; }
 }
 
-function fazerBackup() {
-    const blob = new Blob([JSON.stringify(dadosApp)], {type: "application/json"});
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob); a.download = "backup_rio.json"; a.click();
-}
+function limparLancamentos() { if(confirm("Limpar lançamentos de hoje?")) { listaHorarios.forEach(h => dadosApp[h] = []); dadosApp.extrator = { hoje: [], ontem: [], nomesAtrasados: [], listaCompleta: [] }; atualizarTudo(); } }
+function limparTudo() { if(confirm("Resetar sistema?")) { localStorage.removeItem('rioApp_Projecao'); location.reload(); } }
+function fazerBackup() { const blob = new Blob([JSON.stringify(dadosApp)], {type: "application/json"}); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = "backup_rio.json"; a.click(); }
+function importarBackup(event) { const leitor = new FileReader(); leitor.onload = (e) => { try { dadosApp = JSON.parse(e.target.result); atualizarTudo(); alert("Backup Restaurado!"); } catch(err) { alert("Erro no arquivo."); } }; leitor.readAsText(event.target.files[0]); }
 
-function importarBackup(event) {
-    const arquivo = event.target.files[0];
-    if (!arquivo) return;
-    const leitor = new FileReader();
-    leitor.onload = (e) => { 
-        try { 
-            dadosApp = JSON.parse(e.target.result); 
-            atualizarTudo(); 
-            alert("Backup Restaurado!");
-        } catch(err) { alert("Erro no arquivo."); }
-    };
-    leitor.readAsText(arquivo);
-}
-
-// NOVA FUNÇÃO: LIMPA SÓ OS LANÇAMENTOS E EXTRATOR
-function limparLancamentos() {
-    if (confirm("Deseja apagar os resultados lançados hoje para começar do zero?")) {
-        listaHorarios.forEach(h => dadosApp[h] = []);
-        dadosApp.extrator = { hoje: [], ontem: [], nomesAtrasados: [], listaCompleta: [] };
-        atualizarTudo();
-    }
-}
-
-function limparTudo() { 
-    if (confirm("Isso apagará TODO o histórico e configurações. Continuar?")) { 
-        dadosApp = JSON.parse(JSON.stringify(estadoInicial));
-        localStorage.removeItem('rioApp_Projecao');
-        atualizarTudo();
-    } 
-}
-
-window.onload = () => {
-    document.getElementById('dataCruz').valueAsDate = new Date();
-    const salvo = localStorage.getItem('rioApp_Projecao');
-    if (salvo) { dadosApp = JSON.parse(salvo); }
-    atualizarTudo();
-};
+window.onload = () => { document.getElementById('dataCruz').valueAsDate = new Date(); const salvo = localStorage.getItem('rioApp_Projecao'); if (salvo) dadosApp = JSON.parse(salvo); atualizarTudo(); };
 </script>
 </body>
 </html>
