@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema Rio - Projeção 05 Grupos + Cruz</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background:#f0f2f5; padding:10px; color: #333; margin:0; }
+        .container { max-width: 800px; margin: auto; }
+        .box { background:white; padding:15px; margin-bottom:15px; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.08);} 
+        h2, h3 { text-align:center; color: #1a73e8; margin-top: 0; }
+        textarea { width:100%; height:80px; margin-top: 8px; border: 1px solid #ddd; border-radius: 8px; padding: 10px; box-sizing: border-box; font-size: 14px; }
+        select, button { padding:12px; margin: 5px 0; cursor:pointer; border-radius: 8px; font-weight: bold; width: 100%; border: none; font-size: 15px; }
+        .btn-primary { background: #1a73e8; color: white; }
+        .btn-success { background: #34a853; color: white; }
+        .btn-danger { background: #ea4335; color: white; }
+        .btn-warning { background: #f39c12; color: white; }
+        .painel-projecao { background: linear-gradient(135deg, #f1c40f, #f39c12); color: #fff; padding: 20px; border-radius: 12px; text-align: center; margin-bottom: 15px; box-shadow: 0 4px 15px rgba(243, 156, 18, 0.3); border: 2px solid #d35400; }
+        .grupos-lista { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; margin-top:10px; }
+        .grupo-badge { background: white; color: #d35400; padding: 10px 15px; border-radius: 50px; font-size: 1.2em; font-weight: 900; min-width: 80px; box-shadow: 0 4px 0px #e67e22; position: relative; }
+        
+        /* Estilo da Cruz */
+        .cruz-info { background: #dff9fb; border: 1px solid #c7ecee; padding: 10px; border-radius: 8px; text-align: center; margin-bottom: 15px; font-weight: bold; }
+        .selo-cruz { position: absolute; top: -10px; right: -5px; background: #e74c3c; color: white; font-size: 0.5em; padding: 3px 6px; border-radius: 5px; border: 1px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+
+        /* Novo Campo de Apostas */
+        .campo-apostas { background: rgba(0,0,0,0.1); border-radius: 8px; margin-top: 15px; padding: 10px; font-size: 0.85em; text-align: left; border-top: 1px dashed #fff; }
+        .item-aposta { margin-bottom: 5px; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 3px; }
+
+        .grade-horarios { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 8px; }
+        .card-horario { background: #fff; border: 1px solid #eee; padding: 8px; border-top: 4px solid #1a73e8; border-radius: 8px; text-align: center; font-size: 0.8em; min-height: 120px;}
+        .monitor-box { padding: 8px; border-radius: 6px; text-align: center; color: white; font-weight: bold; font-size: 0.9em; margin-bottom: 5px;}
+        .cor-hoje { background: #27ae60; }
+        .cor-ontem { background: #2980b9; }
+        .cor-atrasado { background: #e67e22; }
+        .lista-txt { font-size: 0.85em; min-height: 40px; color: #555; line-height: 1.4; text-align: center; }
+        #inputArquivo { display: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>📊 Sistema de Projeção Rio</h2>
+
+    <div id="painelProjecao" class="painel-projecao" style="display:none;">
+        <span style="font-weight:bold; text-transform:uppercase; font-size:0.9em;">🎯 GRUPOS PROJETADOS (CRUZAMENTO ATIVO)</span>
+        <div class="grupos-lista" id="listaProjetada"></div>
+        
+        <div id="campoApostasCruz" class="campo-apostas" style="display:none;">
+            <div style="font-weight:bold; margin-bottom:5px; text-align:center;">🎰 SUGESTÕES DA CRUZ:</div>
+            <div id="listaSugestoes"></div>
+        </div>
+    </div>
+
+    <div class="cruz-info">
+        📅 Data: <input type="date" id="dataCruz" onchange="atualizarTudo()" style="padding:5px; border-radius:5px; border:1px solid #ccc;">
+        <span id="txtCruz" style="margin-left:15px; color:#d35400; font-size: 1.2em;"></span>
+    </div>
+
+    <div class="box">
+        <h3>📥 1º Passo: Lançar Milhares</h3>
+        <select id="horarioSeletor">
+            <option value="PPT">PPT</option>
+            <option value="PTM">PTM</option>
+            <option value="PT">PT</option>
+            <option value="PTV">PTV</option>
+            <option value="PTN">PTN</option>
+            <option value="CORUJA">CORUJA</option>
+        </select>
+        <textarea id="entradaManual" placeholder="Cole as milhares aqui..."></textarea>
+        <button class="btn-primary" onclick="lancarManual()">Atualizar Quadro</button>
+    </div>
+
+    <div class="box">
+        <h3>🔗 2º Passo: Extrator de Atrasados</h3>
+        <textarea id="entradaLista" placeholder="Cole aqui a lista do site..."></textarea>
+        <button class="btn-primary" style="background: #6c5ce7;" onclick="extrairLista()">Cruzar Atrasados e Lançamentos</button>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+        <div class="box">
+            <div class="monitor-box cor-hoje">🔥 SAIU HOJE (SITE)</div>
+            <div id="resHoje" class="lista-txt">-</div>
+        </div>
+        <div class="box">
+            <div class="monitor-box cor-ontem">🕒 SAIU ONTEM (SITE)</div>
+            <div id="resOntem" class="lista-txt">-</div>
+        </div>
+    </div>
+
+    <div class="box">
+        <div class="monitor-box cor-atrasado">⚠️ LISTA DE ATRASADOS (ORDEM)</div>
+        <div id="resAtrasados" class="lista-txt" style="font-weight:bold;">-</div>
+    </div>
+
+    <div class="box">
+        <h3>📅 Resultados Lançados</h3>
+        <div class="grade-horarios" id="painelResultados"></div>
+    </div>
+
+    <div class="box" style="display: flex; gap: 5px; flex-wrap: wrap;">
+        <button class="btn-success" onclick="fazerBackup()">💾 Backup</button>
+        <input type="file" id="inputArquivo" accept=".json" onchange="importarBackup(event)">
+        <button class="btn-warning" onclick="document.getElementById('inputArquivo').click()">📂 Restaurar</button>
+        <button class="btn-danger" onclick="limparTudo()">🗑️ Limpar Tudo</button>
+    </div>
+</div>
+
+<script>
+const bichosOficiais = ["Avestruz", "Águia", "Burro", "Borboleta", "Cachorro", "Cabra", "Carneiro", "Camelo", "Cobra", "Coelho", "Cavalo", "Elefante", "Galo", "Gato", "Jacaré", "Leão", "Macaco", "Porco", "Pavão", "Peru", "Touro", "Tigre", "Urso", "Veado", "Vaca"];
+
+const dezenasBichos = {
+    "Avestruz":["01","02","03","04"],"Águia":["05","06","07","08"],"Burro":["09","10","11","12"],"Borboleta":["13","14","15","16"],"Cachorro":["17","18","19","20"],"Cabra":["21","22","23","24"],"Carneiro":["25","26","27","28"],"Camelo":["29","30","31","32"],"Cobra":["33","34","35","36"],"Coelho":["37","38","39","40"],"Cavalo":["41","42","43","44"],"Elefante":["45","46","47","48"],"Galo":["49","50","51","52"],"Gato":["53","54","55","56"],"Jacaré":["57","58","59","60"],"Leão":["61","62","63","64"],"Macaco":["65","66","67","68"],"Porco":["69","70","71","72"],"Pavão":["73","74","75","76"],"Peru":["77","78","79","80"],"Touro":["81","82","83","84"],"Tigre":["85","86","87","88"],"Urso":["89","90","91","92"],"Veado":["93","94","95","96"],"Vaca":["97","98","99","00"]
+};
+
+const estadoInicial = {
+    PPT: [], PTM: [], PT: [], PTV: [], PTN: [], CORUJA: [],
+    extrator: { hoje: [], ontem: [], nomesAtrasados: [], listaCompleta: [] }
+};
+
+let dadosApp = JSON.parse(JSON.stringify(estadoInicial));
+const listaHorarios = ["PPT", "PTM", "PT", "PTV", "PTN", "CORUJA"];
+
+const limparTexto = (t) => t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+
+function getBicho(milhar) {
+    let dezena = parseInt(milhar.slice(-2));
+    if (isNaN(dezena)) return "";
+    if (dezena === 0) dezena = 100;
+    const indice = Math.ceil(dezena / 4) - 1;
+    return bichosOficiais[indice] || "";
+}
+
+function lancarManual() {
+    const texto = document.getElementById('entradaManual').value;
+    const horario = document.getElementById('horarioSeletor').value;
+    const milhares = texto.match(/\d{4}/g);
+    if (!milhares) return alert("Nenhuma milhar encontrada.");
+    dadosApp[horario] = milhares.slice(0, 7);
+    document.getElementById('entradaManual').value = '';
+    atualizarTudo();
+}
+
+function extrairLista() {
+    const texto = document.getElementById('entradaLista').value;
+    if (!texto) return alert("Cole a lista primeiro.");
+    dadosApp.extrator = { hoje: [], ontem: [], nomesAtrasados: [], listaCompleta: [] };
+    const linhas = texto.split('\n');
+    linhas.forEach(linha => {
+        const linhaNorm = limparTexto(linha);
+        if (linhaNorm === "") return;
+        bichosOficiais.forEach(bicho => {
+            const bichoNorm = limparTexto(bicho);
+            if (linhaNorm.includes(bichoNorm)) {
+                if (linhaNorm.includes("hoje")) {
+                    if (!dadosApp.extrator.hoje.includes(bicho)) dadosApp.extrator.hoje.push(bicho);
+                } 
+                else if (linhaNorm.includes("ontem")) {
+                    if (!dadosApp.extrator.ontem.includes(bicho)) dadosApp.extrator.ontem.push(bicho);
+                } 
+                else if (linhaNorm.includes("atrasado")) {
+                    if (!dadosApp.extrator.nomesAtrasados.includes(bicho)) {
+                        const dias = linha.match(/\d+/);
+                        dadosApp.extrator.nomesAtrasados.push(bicho);
+                        dadosApp.extrator.listaCompleta.push(`${bicho} (${dias ? dias[0] + ' dias' : 'atrasado'})`);
+                    }
+                }
+            }
+        });
+    });
+    document.getElementById('entradaLista').value = '';
+    atualizarTudo();
+}
+
+function atualizarTudo() {
+    const painel = document.getElementById('painelResultados');
+    painel.innerHTML = '';
+    listaHorarios.forEach(h => {
+        let html = `<div class="card-horario"><strong>${h}</strong><br>`;
+        html += (dadosApp[h].length) ? dadosApp[h].join('<br>') : "...";
+        painel.innerHTML += html + `</div>`;
+    });
+
+    document.getElementById('resHoje').innerHTML = dadosApp.extrator.hoje.join(', ') || "-";
+    document.getElementById('resOntem').innerHTML = dadosApp.extrator.ontem.join(', ') || "-";
+    document.getElementById('resAtrasados').innerHTML = dadosApp.extrator.listaCompleta.slice(0, 5).join(' | ') || "-";
+
+    gerarProjecaoCinco();
+    localStorage.setItem('rioApp_Projecao', JSON.stringify(dadosApp));
+}
+
+function gerarProjecaoCinco() {
+    const container = document.getElementById('painelProjecao');
+    const listaHtml = document.getElementById('listaProjetada');
+    const campoApostas = document.getElementById('campoApostasCruz');
+    const listaSugestoes = document.getElementById('listaSugestoes');
+    
+    // CALCULO DA CRUZ
+    const dataInput = document.getElementById('dataCruz').value;
+    let dezenasCruzadas = [];
+    let bichosCruz = [];
+    if(dataInput){
+        const dia = parseInt(dataInput.split('-')[2]);
+        const numCruz = [(dia+3)%10, (dia+6)%10, (dia+9)%10, (dia+12)%10].map(String);
+        document.getElementById('txtCruz').innerText = `CRUZ: ${numCruz.join(' - ')}`;
+        
+        numCruz.forEach(n1 => {
+            numCruz.forEach(n2 => {
+                if(n1 !== n2) {
+                    let dezena = n1 + n2;
+                    dezenasCruzadas.push(dezena);
+                    let nomeB = getBicho("00" + dezena);
+                    if(nomeB && !bichosCruz.includes(nomeB)) bichosCruz.push(nomeB);
+                }
+            });
+        });
+    }
+
+    let bloqueados = [...dadosApp.extrator.hoje, ...dadosApp.extrator.ontem];
+    listaHorarios.forEach(h => {
+        dadosApp[h].forEach(m => {
+            const b = getBicho(m);
+            if(b && !bloqueados.includes(b)) bloqueados.push(b);
+        });
+    });
+
+    const candidatos = dadosApp.extrator.nomesAtrasados.filter(nome => !bloqueados.includes(nome));
+
+    if (candidatos.length > 0) {
+        listaHtml.innerHTML = "";
+        listaSugestoes.innerHTML = "";
+        let temSugestao = false;
+        
+        let ordenados = [...new Set([...bichosCruz.filter(b => candidatos.includes(b)), ...candidatos])];
+        
+        ordenados.slice(0, 7).forEach(grupo => {
+            const ehDaCruz = bichosCruz.includes(grupo);
+            listaHtml.innerHTML += `<div class="grupo-badge">${grupo}${ehDaCruz ? '<span class="selo-cruz">CRUZ</span>' : ''}</div>`;
+            
+            // Se for da Cruz, gera as apostas
+            if(ehDaCruz) {
+                temSugestao = true;
+                const dzs = dezenasBichos[grupo];
+                const d = dzs[Math.floor(Math.random() * dzs.length)]; // Pega uma dezena aleatória do bicho
+                const c = Math.floor(Math.random() * 10) + d;
+                const m = Math.floor(Math.random() * 10).toString() + Math.floor(Math.random() * 10).toString() + d;
+                
+                listaSugestoes.innerHTML += `<div class="item-aposta"><b>${grupo}:</b> Dezena: ${d} | Centena: ${c} | Milhar: ${m}</div>`;
+            }
+        });
+        
+        container.style.display = "block";
+        campoApostas.style.display = temSugestao ? "block" : "none";
+    } else {
+        container.style.display = "none";
+    }
+}
+
+function fazerBackup() {
+    const blob = new Blob([JSON.stringify(dadosApp)], {type: "application/json"});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = "backup_rio.json"; a.click();
+}
+
+function importarBackup(event) {
+    const arquivo = event.target.files[0];
+    if (!arquivo) return;
+    const leitor = new FileReader();
+    leitor.onload = (e) => { 
+        try { 
+            dadosApp = JSON.parse(e.target.result); 
+            atualizarTudo(); 
+            alert("Backup Restaurado!");
+        } catch(err) { alert("Erro no arquivo."); }
+    };
+    leitor.readAsText(arquivo);
+}
+
+function limparTudo() { 
+    if (confirm("Limpar tudo?")) { 
+        dadosApp = JSON.parse(JSON.stringify(estadoInicial));
+        localStorage.removeItem('rioApp_Projecao');
+        atualizarTudo();
+    } 
+}
+
+window.onload = () => {
+    document.getElementById('dataCruz').valueAsDate = new Date();
+    const salvo = localStorage.getItem('rioApp_Projecao');
+    if (salvo) { dadosApp = JSON.parse(salvo); }
+    atualizarTudo();
+};
+</script>
+</body>
+</html>
