@@ -21,15 +21,14 @@
         .btn-success { background: #34a853; color: white; }
         .btn-danger { background: #ea4335; color: white; }
         .btn-warning { background: #f39c12; color: white; }
+        .btn-info { background: #17a2b8; color: white; }
+        
         .painel-projecao { background: linear-gradient(135deg, #f1c40f, #f39c12); color: #fff; padding: 20px; border-radius: 12px; text-align: center; margin-bottom: 15px; box-shadow: 0 4px 15px rgba(243, 156, 18, 0.3); border: 2px solid #d35400; }
         .grupos-lista { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; margin-top:10px; }
         .grupo-badge { background: white; color: #d35400; padding: 10px 15px; border-radius: 50px; font-size: 1.2em; font-weight: 900; min-width: 80px; box-shadow: 0 4px 0px #e67e22; position: relative; }
         
-        /* Estilo da Cruz */
         .cruz-info { background: #dff9fb; border: 1px solid #c7ecee; padding: 10px; border-radius: 8px; text-align: center; margin-bottom: 15px; font-weight: bold; }
         .selo-cruz { position: absolute; top: -10px; right: -5px; background: #e74c3c; color: white; font-size: 0.5em; padding: 3px 6px; border-radius: 5px; border: 1px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
-
-        /* Novo Campo de Apostas */
         .campo-apostas { background: rgba(0,0,0,0.1); border-radius: 8px; margin-top: 15px; padding: 10px; font-size: 0.85em; text-align: left; border-top: 1px dashed #fff; }
         .item-aposta { margin-bottom: 5px; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 3px; }
 
@@ -51,7 +50,6 @@
     <div id="painelProjecao" class="painel-projecao" style="display:none;">
         <span style="font-weight:bold; text-transform:uppercase; font-size:0.9em;">🎯 GRUPOS PROJETADOS (CRUZAMENTO ATIVO)</span>
         <div class="grupos-lista" id="listaProjetada"></div>
-        
         <div id="campoApostasCruz" class="campo-apostas" style="display:none;">
             <div style="font-weight:bold; margin-bottom:5px; text-align:center;">🎰 SUGESTÕES DA CRUZ:</div>
             <div id="listaSugestoes"></div>
@@ -75,6 +73,7 @@
         </select>
         <textarea id="entradaManual" placeholder="Cole as milhares aqui..."></textarea>
         <button class="btn-primary" onclick="lancarManual()">Atualizar Quadro</button>
+        <button class="btn-info" style="margin-top:10px; font-size: 13px; padding: 8px;" onclick="limparLancamentos()">🧹 Limpar Lançamentos do Dia</button>
     </div>
 
     <div class="box">
@@ -108,7 +107,7 @@
         <button class="btn-success" onclick="fazerBackup()">💾 Backup</button>
         <input type="file" id="inputArquivo" accept=".json" onchange="importarBackup(event)">
         <button class="btn-warning" onclick="document.getElementById('inputArquivo').click()">📂 Restaurar</button>
-        <button class="btn-danger" onclick="limparTudo()">🗑️ Limpar Tudo</button>
+        <button class="btn-danger" onclick="limparTudo()">🗑️ Resetar Sistema</button>
     </div>
 </div>
 
@@ -183,7 +182,7 @@ function atualizarTudo() {
     painel.innerHTML = '';
     listaHorarios.forEach(h => {
         let html = `<div class="card-horario"><strong>${h}</strong><br>`;
-        html += (dadosApp[h].length) ? dadosApp[h].join('<br>') : "...";
+        html += (dadosApp[h] && dadosApp[h].length) ? dadosApp[h].join('<br>') : "...";
         painel.innerHTML += html + `</div>`;
     });
 
@@ -223,10 +222,12 @@ function gerarProjecaoCinco() {
 
     let bloqueados = [...dadosApp.extrator.hoje, ...dadosApp.extrator.ontem];
     listaHorarios.forEach(h => {
-        dadosApp[h].forEach(m => {
-            const b = getBicho(m);
-            if(b && !bloqueados.includes(b)) bloqueados.push(b);
-        });
+        if(dadosApp[h]){
+            dadosApp[h].forEach(m => {
+                const b = getBicho(m);
+                if(b && !bloqueados.includes(b)) bloqueados.push(b);
+            });
+        }
     });
 
     const candidatos = dadosApp.extrator.nomesAtrasados.filter(nome => !bloqueados.includes(nome));
@@ -280,8 +281,17 @@ function importarBackup(event) {
     leitor.readAsText(arquivo);
 }
 
+// NOVA FUNÇÃO: LIMPA SÓ OS LANÇAMENTOS E EXTRATOR
+function limparLancamentos() {
+    if (confirm("Deseja apagar os resultados lançados hoje para começar do zero?")) {
+        listaHorarios.forEach(h => dadosApp[h] = []);
+        dadosApp.extrator = { hoje: [], ontem: [], nomesAtrasados: [], listaCompleta: [] };
+        atualizarTudo();
+    }
+}
+
 function limparTudo() { 
-    if (confirm("Limpar tudo?")) { 
+    if (confirm("Isso apagará TODO o histórico e configurações. Continuar?")) { 
         dadosApp = JSON.parse(JSON.stringify(estadoInicial));
         localStorage.removeItem('rioApp_Projecao');
         atualizarTudo();
