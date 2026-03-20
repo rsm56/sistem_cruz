@@ -4,6 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistema Rio - Projeção 05 Grupos + Cruz</title>
+    
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/6119/6119533.png">
+    <link rel="icon" href="https://cdn-icons-png.flaticon.com/512/6119/6119533.png">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+
     <style>
         body { font-family: 'Segoe UI', Tahoma, sans-serif; background:#f0f2f5; padding:10px; color: #333; margin:0; }
         .container { max-width: 800px; margin: auto; }
@@ -195,7 +201,6 @@ function gerarProjecaoCinco() {
     const campoApostas = document.getElementById('campoApostasCruz');
     const listaSugestoes = document.getElementById('listaSugestoes');
     
-    // CALCULO DA CRUZ
     const dataInput = document.getElementById('dataCruz').value;
     let dezenasCruzadas = [];
     let bichosCruz = [];
@@ -237,12 +242,11 @@ function gerarProjecaoCinco() {
             const ehDaCruz = bichosCruz.includes(grupo);
             listaHtml.innerHTML += `<div class="grupo-badge">${grupo}${ehDaCruz ? '<span class="selo-cruz">CRUZ</span>' : ''}</div>`;
             
-            // Se for da Cruz, gera as apostas
             if(ehDaCruz) {
                 temSugestao = true;
                 const dzs = dezenasBichos[grupo];
-                const d = dzs[Math.floor(Math.random() * dzs.length)]; // Pega uma dezena aleatória do bicho
-                const c = Math.floor(Math.random() * 10) + d;
+                const d = dzs[Math.floor(Math.random() * dzs.length)];
+                const c = Math.floor(Math.random() * 10).toString() + d;
                 const m = Math.floor(Math.random() * 10).toString() + Math.floor(Math.random() * 10).toString() + d;
                 
                 listaSugestoes.innerHTML += `<div class="item-aposta"><b>${grupo}:</b> Dezena: ${d} | Centena: ${c} | Milhar: ${m}</div>`;
