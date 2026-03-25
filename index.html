@@ -149,20 +149,19 @@ function extrairLista() {
         bichosOficiais.forEach(bicho => {
             const bichoNorm = limparTexto(bicho);
             if (linhaNorm.includes(bichoNorm)) {
-                if (linhaNorm.includes("hoje") && !dadosApp.extrator.hoje.includes(bicho)) {
-                    dadosApp.extrator.hoje.push(bicho);
+                // Filtro para 1º PRÊMIO (Hoje/Ontem)
+                if ((linhaNorm.includes("hoje") || linhaNorm.includes("ontem")) && (linhaNorm.includes("1º") || linhaNorm.includes("primeiro"))) {
+                    if (linhaNorm.includes("hoje")) dadosApp.extrator.hoje.push(bicho);
+                    else dadosApp.extrator.ontem.push(bicho);
                 }
-                else if (linhaNorm.includes("ontem") && !dadosApp.extrator.ontem.includes(bicho)) {
-                    dadosApp.extrator.ontem.push(bicho);
-                }
-                else if (linhaNorm.includes("atrasado") && !dadosApp.extrator.nomesAtrasados.includes(bicho)) {
-                    // CORREÇÃO AQUI: Busca o número que vem antes da palavra "dia" ou "atrasado"
-                    // Ignora números seguidos de º ou ª (posições)
+                // Filtro de ATRASADOS (1º PRÊMIO)
+                else if (linhaNorm.includes("atrasado") || linhaNorm.includes("dia")) {
                     let matchDias = linha.match(/(\d+)\s*(dia|atrasado)/i);
                     let diasValor = matchDias ? matchDias[1] : "??";
-                    
-                    dadosApp.extrator.nomesAtrasados.push(bicho);
-                    dadosApp.extrator.listaCompleta.push(`${bicho} (${diasValor} dias)`);
+                    if(!dadosApp.extrator.nomesAtrasados.includes(bicho)){
+                        dadosApp.extrator.nomesAtrasados.push(bicho);
+                        dadosApp.extrator.listaCompleta.push(`${bicho} (${diasValor} dias)`);
+                    }
                 }
             }
         });
@@ -191,20 +190,24 @@ function gerarProjecaoCinco() {
     let bichosCruz = [];
     if(dataInput){
         const dia = parseInt(dataInput.split('-')[2]);
-        const numCruz = [(dia+3)%10, (dia+6)%10, (dia+9)%10, (dia+12)%10].map(String);
-        document.getElementById('txtCruz').innerText = `CRUZ: ${numCruz.join(' - ')}`;
-        numCruz.forEach(n1 => numCruz.forEach(n2 => { if(n1 !== n2) { let b = getBicho("00" + n1 + n2); if(b && !bichosCruz.includes(b)) bichosCruz.push(b); } }));
+        const n = [(dia+3)%10, (dia+6)%10, (dia+9)%10, (dia+12)%10].map(String);
+        document.getElementById('txtCruz').innerText = `CRUZ: ${n.join(' - ')}`;
+        n.forEach(n1 => n.forEach(n2 => { if(n1 !== n2) { let b = getBicho("00" + n1 + n2); if(b && !bichosCruz.includes(b)) bichosCruz.push(b); } }));
     }
 
+    // Bloqueia apenas quem saiu no 1º PRÊMIO Hoje ou Ontem
     let bloqueados = [...dadosApp.extrator.hoje, ...dadosApp.extrator.ontem];
-    listaHorarios.forEach(h => dadosApp[h].forEach(m => { const b = getBicho(m); if(b && !bloqueados.includes(b)) bloqueados.push(b); }));
-
+    
+    // Candidatos são os atrasados que não saíram no 1º prêmio hoje/ontem
     const candidatos = dadosApp.extrator.nomesAtrasados.filter(nome => !bloqueados.includes(nome));
+    
     if (candidatos.length > 0) {
         const listaHtml = document.getElementById('listaProjetada');
         const listaSugestoes = document.getElementById('listaSugestoes');
         listaHtml.innerHTML = ""; listaSugestoes.innerHTML = "";
         let temSugestao = false;
+        
+        // Prioridade: Bicho que está na Cruz E está atrasado no 1º prêmio
         let ordenados = [...new Set([...bichosCruz.filter(b => candidatos.includes(b)), ...candidatos])].slice(0, 7);
         
         ordenados.forEach(grupo => {
@@ -213,7 +216,7 @@ function gerarProjecaoCinco() {
             if(ehCruz) {
                 temSugestao = true;
                 const d = dezenasBichos[grupo][Math.floor(Math.random()*4)];
-                listaSugestoes.innerHTML += `<div class="item-aposta"><b>${grupo}:</b> Dz: ${d} | C: ${Math.floor(Math.random()*10).toString()+d} | M: ${Math.floor(Math.random()*10).toString()+Math.floor(Math.random()*10)+d}</div>`;
+                listaSugestoes.innerHTML += `<div class="item-aposta"><b>${grupo}:</b> Dz: ${d} | M: ${Math.floor(Math.random()*10).toString()+Math.floor(Math.random()*10)+d}</div>`;
             }
         });
         container.style.display = "block";
